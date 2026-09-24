@@ -135,7 +135,7 @@ The system operates as a free, student-driven service. It automatically tracks p
   * `event_participants`: Relational join table mapping participant IDs to event IDs with join timestamps and composite primary keys to prevent duplicate registrations.
 * **Row-Level Security (RLS):** Security policies must be enforced directly at the Postgres layer:
   * Public/authenticated users have read-only access to open game listings.
-  * Only the authenticated event creator (`auth.uid() = creator_id`) may modify event details or trigger early cancellations.
+  * Authenticated users may insert an event only when `auth.uid() = creator_id`; only the authenticated event creator may modify event details or trigger early cancellations.
   * Authenticated users may only insert or delete their own participation record (`auth.uid() = user_id`).
 * **Realtime Synchronization:** The database shall leverage Postgres replication streams (Supabase Realtime) to broadcast roster count mutations directly to connected client applications without requiring polling or manual page reloads.
 * **Automated Cutoff Evaluation:** The database environment must support scheduled cron triggers (pg_cron or Edge Functions) to evaluate upcoming game cutoff timestamps and transition under-subscribed events to `cancelled` status.
