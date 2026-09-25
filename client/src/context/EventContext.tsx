@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 // Define the shape of our Event data
 export type Event = {
   id: string;
+  name: string;
   sport: string;
   venue: string;
   time: string;
@@ -26,6 +27,7 @@ const EventContext = createContext<EventContextType | undefined>(undefined);
 const initialEvents: Event[] = [
   {
     id: "1",
+    name: "John D.'s Basketball Game",
     sport: "Basketball",
     venue: "Spoelhof Fieldhouse",
     time: "Tonight @ 7:00 PM",
@@ -45,6 +47,7 @@ const initialEvents: Event[] = [
   },
   {
     id: "2",
+    name: "Alex B.'s Soccer Game",
     sport: "Soccer",
     venue: "Gainey Athletic Complex",
     time: "Tomorrow @ 5:30 PM",

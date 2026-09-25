@@ -9,18 +9,17 @@ export default function EventDetailsScreen() {
   // Find the exact event from our master list
   const event = events.find((e) => e.id === id);
 
-  if (!event) {
-    return <Text style={{ padding: 40 }}>Event not found.</Text>;
-  }
+  // If the event is not found, display an error message
+  if (!event) return <Text style={{ padding: 40 }}>Event not found.</Text>;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: `${event.sport} Game` }} />
 
+      { /* Display the event details in a card-like format */ }
       <View style={styles.headerCard}>
-        <Text style={styles.title}>
-          {event.sport} at {event.venue}
-        </Text>
+        <Text style={styles.title}>{event.name}</Text>
+        <Text style={styles.subtitle}>📍 {event.venue}</Text>
         <Text style={styles.subtitle}>🕒 {event.time}</Text>
         <Text style={styles.skillBadge}>{event.skillLevel}</Text>
       </View>
