@@ -11,5 +11,9 @@
     "client": "npm start --prefix client",
     "test:client": "npm test --prefix client",
     "server": "npm start --prefix server"
+  },
+  "devDependencies": {
+    "@react-native/jest-preset": "^0.86.3",
+    "react-native": "^0.86.3"
   }
 }
