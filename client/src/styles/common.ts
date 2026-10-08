@@ -10,9 +10,14 @@ export const colors = {
   textPrimary: "#212529",
   textSecondary: "#495057",
   textMuted: "#6C757D",
-  danger: "#DC3545",
   glassTint: "rgba(0, 86, 179, 0.18)",        // <- here
   surfaceTranslucent: "rgba(255, 255, 255, 0.6)",
+
+  // Alerts and information modals
+  success: "#35DC46",
+  danger: "#DC3545",
+  caution: "#DC7535",
+  information: "#3835DC"
 };
 
 // Styles used on more than one screen/component.

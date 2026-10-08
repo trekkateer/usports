@@ -1,8 +1,14 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { Event, EventProvider, useEvents } from "../../../context/EventContext";
-import { ProfileProvider } from "../../../context/ProfileContext";
-import CreateScreen from "../create";
+import { Event, EventProvider, useEvents } from "../../context/EventContext";
+import { ProfileProvider } from "../../context/ProfileContext";
+import CreateScreen from "../host";
+
+// The screen dismisses itself via the router after submitting; there's no
+// navigator mounted in these tests, so stub it out
+jest.mock("expo-router", () => ({
+  router: { canGoBack: () => false, back: jest.fn() },
+}));
 
 const renderWithProviders = async (component: React.ReactElement) => {
   return await render(

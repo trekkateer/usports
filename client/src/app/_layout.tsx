@@ -15,6 +15,13 @@ export default function RootLayout() {
               presentation: "modal",
             }}
           />
+          <Stack.Screen
+            name="host"
+            options={{
+              title: "Host a Game",
+              presentation: "modal",
+            }}
+          />
         </Stack>
       </EventProvider>
     </ProfileProvider>

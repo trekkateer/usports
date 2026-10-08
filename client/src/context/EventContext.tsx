@@ -127,6 +127,7 @@ type NewEventInput = {
   // name: string;
   sport: string;
   venue: string;
+  description: string;
   dateTime: string;
   minPlayers: number;
   // joinedCount: number;
