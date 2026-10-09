@@ -10,6 +10,10 @@
   "scripts": {
     "client": "npm start --prefix client",
     "test:client": "npm test --prefix client",
-    "server": "npm start --prefix server"
+    "server": "npm start --prefix server",
+    "dev:server": "npm run dev --prefix server",
+    "build:server": "npm run build --prefix server",
+    "test:server": "npm test --prefix server",
+    "test": "npm run test:client && npm run test:server"
   }
 }
