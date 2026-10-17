@@ -1,5 +1,4 @@
 # USports Coding Standard
-(this is a draft)
 
 ## Languages and frameworks
 
@@ -16,7 +15,13 @@
 - Use `PascalCase` for React components, classes, and types.
 - Use `camelCase` for variables, functions, and object properties.
 - Use descriptive names instead of abbreviations.
-- Keep functions focused and reasonably small.
+- Keep functions focused on one responsibility. Functions should be easy to read, test, and explain. Split complex logic into smaller helper functions when applicable.
+
+## Automated enforcement
+
+- Before submitting a pull request, run `npm run lint --prefix client`, `npm test`, and `npm run build:server` from the repository root.
+- Resolve linting, testing, and server build failures before submitting the pull request.
+- Do not disable or bypass a style rule without explaining the reason in the pull request.
 
 ## API conventions
 
@@ -50,7 +55,14 @@
 
 ## Git and pull requests
 
-- Keep commits focused.
+- Keep commits focused on one logical change.
+- Use the commit format `<type>(<scope>): <description>`. Example: `fix(server): reject invalid event dates`.
+- Use an imperative, present-tense description.
+- Recommended types include `feat`, `fix`, `docs`, `test`, `refactor`, and `chore`.
+- Keep the commit subject at or below 72 characters.
 - Explain behavior changes in pull requests.
-- Include tests for behavior changes.
 - Do not commit `node_modules`, build output, local environment files, or logs.
+- Do not open a pull request while required client lint, test, or server build checks are failing.
+- Add or update tests whenever a behavior change requires test coverage.
+- Pull requests must include a summary, related issue number when applicable, testing details, and any known limitations.
+- Add appropriate labels and request review from relevant team members.
