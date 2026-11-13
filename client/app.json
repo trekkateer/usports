@@ -47,6 +47,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "31474499-a282-44db-a2be-5ffdbac3d285"
+      }
+    },
+    "owner": "trekkateer"
   }
 }
