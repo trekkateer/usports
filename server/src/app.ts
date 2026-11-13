@@ -2,6 +2,7 @@ import express from "express";
 import { errorHandler } from "./middleware/errorHandler";
 import eventRoutes from "./routes/eventRoutes";
 import profileRoutes from "./routes/profileRoutes";
+import pushTokenRoutes from "./routes/pushTokenRoutes";
 
 export const app = express();
 
@@ -26,6 +27,7 @@ app.get("/api/health", (_request, response) => {
 
 app.use("/api/events", eventRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/push-tokens", pushTokenRoutes);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Route not found" });
