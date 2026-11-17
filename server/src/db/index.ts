@@ -148,7 +148,7 @@ export async function createEvent(eventData: Record<string, any>) {
 /**
  * Adds a user to an event's roster in the database.
  * 
- * Sets the default participant status to 'going'.
+ * Reactivates a cancelled participant or inserts a new participant with status 'going'.
  *
  * @param {string} eventId - UUID of the target event.
  * @param {string} userId - UUID of the student joining the event.
@@ -157,6 +157,27 @@ export async function createEvent(eventData: Record<string, any>) {
  *                 if foreign keys fail, or if the Supabase query encounters an error.
  */
 export async function addParticipant(eventId: string, userId: string): Promise<Record<string, any>> {
+  const { data: reactivated, error: reactivateError } = await supabase
+    .from('event_participants')
+    .update({ status: 'going' })
+    .match({
+      event_id: eventId,
+      user_id: userId,
+      status: 'cancelled',
+    })
+    .select()
+    .maybeSingle();
+
+  if (reactivateError) {
+    throw new Error(
+      `addParticipant failed for user ${userId} on event ${eventId}: ${reactivateError.message}`,
+    );
+  }
+
+  if (reactivated) {
+    return reactivated;
+  }
+
   const { data, error } = await supabase
     .from('event_participants')
     .insert([

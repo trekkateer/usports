@@ -1,4 +1,10 @@
-import { ensureUserRow, getEventRows, getParticipantStatus, updateEventStatus } from "../../src/db";
+import {
+  addParticipant,
+  ensureUserRow,
+  getEventRows,
+  getParticipantStatus,
+  updateEventStatus,
+} from "../../src/db";
 import { supabase } from "../../src/db/client";
 
 jest.mock("../../src/db/client", () => ({
@@ -113,6 +119,27 @@ describe("getEventRows", () => {
     expect(mockedSupabase.from).toHaveBeenCalledWith("events");
     expect(query.update).toHaveBeenCalledWith({ status: "full" });
     expect(query.eq).toHaveBeenCalledWith("id", "event-1");
+  });
+
+  it("reactivates a cancelled participant without inserting a duplicate", async () => {
+    const query = createQueryBuilder({
+      data: { event_id: "event-1", user_id: "user-1", status: "going" },
+      error: null,
+    });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(addParticipant("event-1", "user-1")).resolves.toEqual({
+      event_id: "event-1",
+      user_id: "user-1",
+      status: "going",
+    });
+    expect(query.update).toHaveBeenCalledWith({ status: "going" });
+    expect(query.match).toHaveBeenCalledWith({
+      event_id: "event-1",
+      user_id: "user-1",
+      status: "cancelled",
+    });
+    expect(query.insert).toBeUndefined();
   });
 });
 
