@@ -119,6 +119,15 @@ describe("joinEvent (mocked repository)", () => {
     );
     expect(mockedAddEventParticipant).not.toHaveBeenCalled();
   });
+
+  it("allows a participant with cancelled status to rejoin", async () => {
+    stubRepositoryWith(makeEvent());
+    mockedGetParticipantStatus.mockResolvedValue("cancelled");
+
+    await joinEvent("e1", "user-sam");
+
+    expect(mockedAddEventParticipant).toHaveBeenCalledWith("e1", "user-sam");
+  });
 });
 
 describe("leaveEvent (mocked repository)", () => {
