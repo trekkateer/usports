@@ -15,25 +15,32 @@ jest.mock("../../src/db/client", () => ({
 
 const mockedSupabase = jest.mocked(supabase);
 
-function createQueryBuilder(result: { data: unknown; error: Error | null }) {
+function createQueryBuilder(
+  result: { data: unknown; error: Error | null },
+  insertResult = result,
+) {
   const query = {
     select: jest.fn(),
+    insert: jest.fn(),
     eq: jest.fn(),
     gte: jest.fn(),
     lt: jest.fn(),
     match: jest.fn(),
     update: jest.fn(),
     maybeSingle: jest.fn(),
+    single: jest.fn(),
     then: jest.fn((resolve) => resolve(result)),
   };
 
   query.select.mockReturnValue(query);
+  query.insert.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.gte.mockReturnValue(query);
   query.lt.mockReturnValue(query);
   query.match.mockReturnValue(query);
   query.update.mockReturnValue(query);
   query.maybeSingle.mockReturnValue(result);
+  query.single.mockReturnValue(insertResult);
 
   return query;
 }
@@ -139,7 +146,48 @@ describe("getEventRows", () => {
       user_id: "user-1",
       status: "cancelled",
     });
-    expect(query.insert).toBeUndefined();
+    expect(query.insert).not.toHaveBeenCalled();
+  });
+
+  it("inserts a participant when no cancelled row exists", async () => {
+    const query = createQueryBuilder(
+      { data: null, error: null },
+      { data: { event_id: "event-1", user_id: "user-1", status: "going" }, error: null },
+    );
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(addParticipant("event-1", "user-1")).resolves.toEqual({
+      event_id: "event-1",
+      user_id: "user-1",
+      status: "going",
+    });
+    expect(query.insert).toHaveBeenCalledWith([
+      { event_id: "event-1", user_id: "user-1", status: "going" },
+    ]);
+  });
+
+  it("surfaces errors while reactivating a cancelled participant", async () => {
+    const query = createQueryBuilder({
+      data: null,
+      error: new Error("database unavailable"),
+    });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(addParticipant("event-1", "user-1")).rejects.toThrow(
+      "addParticipant failed for user user-1 on event event-1: database unavailable",
+    );
+  });
+
+  it("surfaces errors while inserting a new participant", async () => {
+    const query = createQueryBuilder(
+      { data: null, error: null },
+      { data: null, error: new Error("duplicate participant") },
+    );
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(addParticipant("event-1", "user-1")).rejects.toThrow(
+      "addParticipant failed for user user-1 on event event-1: duplicate participant",
+    );
   });
 });
 
