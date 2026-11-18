@@ -103,6 +103,18 @@ describe("joinEvent (mocked repository)", () => {
     expect(mockedAddEventParticipant).not.toHaveBeenCalled();
   });
 
+  it("does not let a cancelled participant bypass capacity checks", async () => {
+    stubRepositoryWith(
+      makeEvent({ status: "open", joinedCount: 3, maxPlayers: 3 }),
+    );
+    mockedGetParticipantStatus.mockResolvedValue("cancelled");
+
+    await expect(joinEvent("e1", "user-sam")).rejects.toThrow(
+      new ConflictError("Event is full"),
+    );
+    expect(mockedAddEventParticipant).not.toHaveBeenCalled();
+  });
+
   it("rejects joining a cancelled event without saving anything", async () => {
     stubRepositoryWith(makeEvent({ status: "cancelled" }));
 
@@ -118,6 +130,15 @@ describe("joinEvent (mocked repository)", () => {
       new ConflictError("Participant has already joined"),
     );
     expect(mockedAddEventParticipant).not.toHaveBeenCalled();
+  });
+
+  it("allows a participant with cancelled status to rejoin", async () => {
+    stubRepositoryWith(makeEvent());
+    mockedGetParticipantStatus.mockResolvedValue("cancelled");
+
+    await joinEvent("e1", "user-sam");
+
+    expect(mockedAddEventParticipant).toHaveBeenCalledWith("e1", "user-sam");
   });
 });
 
@@ -149,6 +170,16 @@ describe("leaveEvent (mocked repository)", () => {
 
     expect(mockedRemoveEventParticipant).toHaveBeenCalledWith("e1", "user-sam");
     expect(result.status).toBe("open");
+  });
+
+  it("rejects leaving after the participant has already left", async () => {
+    stubRepositoryWith(makeEvent());
+    mockedGetParticipantStatus.mockResolvedValue("cancelled");
+
+    await expect(leaveEvent("e1", "user-sam")).rejects.toThrow(
+      new Error("Participant not found"),
+    );
+    expect(mockedRemoveEventParticipant).not.toHaveBeenCalled();
   });
 });
 
