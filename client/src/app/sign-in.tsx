@@ -15,14 +15,17 @@ import { signIn, signUp } from "../api/auth";
 import { useProfile } from "../context/ProfileContext";
 import { colors } from "../styles/common";
 
+// Font Awesome's official React Native icons (drawn as SVG, no font file)
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+
 // The app opens on this screen (see app/index.tsx). A student either:
 // - signs in with a verified calvin.edu email and goes to the games feed, or
 // - creates an account, and is told to confirm it from their inbox before signing in.
 // The server does all the checking; this screen shows its messages word for word.
 //
 // Layout ("Game Day" design, Figma file "ussports"): a maroon hero with court lines, the
-// USports mark and slogan on top; the form sits on a white bottom sheet so its contrast
-// never depends on what's behind it.
+// USports mark on top; the form sits on a white bottom sheet
 
 // The two things this screen can do
 type Mode = "signIn" | "signUp";
@@ -162,11 +165,6 @@ export default function SignInScreen() {
             </View>
             <Text style={styles.wordmark}>USPORTS</Text>
           </View>
-
-          <Text style={styles.slogan}>
-            Find a game.{"\n"}
-            <Text style={styles.sloganAccent}>Grab your spot.</Text>
-          </Text>
         </View>
       </View>
 
@@ -235,15 +233,14 @@ export default function SignInScreen() {
                   onFocus={() => setFocusedField("password")}
                   onBlur={() => setFocusedField(null)}
                 />
-                {/* A real button whose label says what it will do next */}
-                <Pressable
-                  testID="auth-show-password"
+                {/* Show/Hide password button */}
+                <Pressable testID="auth-show-password"
                   accessibilityRole="button"
                   accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                   style={styles.showToggle}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.linkText}>{showPassword ? "Hide" : "Show"}</Text>
+                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} size={20} color={colors.calvinMaroon} />
                 </Pressable>
               </View>
 
@@ -458,8 +455,6 @@ const styles = StyleSheet.create({
   ballSideSeamLeft: { left: -15 }, // pokes in from the left edge: ")"
   ballSideSeamRight: { right: -15 }, // pokes in from the right edge: "("
   wordmark: { color: "white", fontSize: 26, fontWeight: "900", letterSpacing: 2 },
-  slogan: { color: "white", fontSize: 40, lineHeight: 44, fontWeight: "900", letterSpacing: -0.5 },
-  sloganAccent: { color: colors.calvinGold },
 
   // ----- Sheet -----
   sheet: {
