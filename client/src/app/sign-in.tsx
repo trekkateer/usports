@@ -556,8 +556,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     borderRadius: CONTROL_RADIUS,
-    backgroundColor: colors.calvinMaroon,
-    boxShadow: "0px 8px 20px rgba(140, 33, 49, 0.35)",
+    backgroundColor: colors.calvinMaroon
   },
   buttonPressed: { opacity: 0.85 },
   // Busy: same size, dimmed, inert (the Pressable is disabled)
