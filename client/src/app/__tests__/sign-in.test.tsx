@@ -22,6 +22,9 @@ jest.mock("expo-router", () => ({
   router: { replace: jest.fn() },
 }));
 
+// The eye icon loads a font file, which Jest can't do; draw an empty placeholder instead
+jest.mock("@expo/vector-icons/FontAwesome", () => () => null);
+
 // After signing in, the screen tells the profile context who signed in, so the app shows
 // their profile and games. Fake the context so each test can check what it was told
 const mockSetSignedInUser = jest.fn();
@@ -190,18 +193,16 @@ describe("SignInScreen: signing in", () => {
   });
 
   it("has a Show password button that reveals the password, then hides it again", async () => {
-    const { getByLabelText, getByText } = await renderScreen();
+    const { getByLabelText } = await renderScreen();
 
-    // Hidden to start, with a button that says what it will do
+    // Hidden to start, with an eye-icon button whose label says what it will do
     expect(getByLabelText("Password").props.secureTextEntry).toBe(true);
     expect(getByLabelText("Show password").props.accessibilityRole).toBe("button");
-    expect(getByText("Show")).toBeTruthy();
 
     // Reveal: the text is readable and the button's label flips to "Hide"
     await fireEvent.press(getByLabelText("Show password"));
     expect(getByLabelText("Password").props.secureTextEntry).toBe(false);
     expect(getByLabelText("Hide password")).toBeTruthy();
-    expect(getByText("Hide")).toBeTruthy();
 
     // Hide again
     await fireEvent.press(getByLabelText("Hide password"));
