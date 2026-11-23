@@ -1,9 +1,13 @@
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import StatusBadge from "../../components/StatusBadge";
 import { useEvents } from "../../context/EventContext";
 import { formatEventDateTime } from "../../utils/formatEventTime";
 import { colors, commonStyles } from "../../styles/common";
+
+// Imports fontawesome for using glyphs
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,8 +26,18 @@ export default function EventDetailsScreen() {
   const canJoin = !event.isJoinedByMe && !isFull && event.status !== "cancelled";
 
   return (
-    <ScrollView style={commonStyles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: `${event.sport} Game` }} />
+    <ScrollView
+      style={commonStyles.container}
+      contentContainerStyle={styles.content}
+      
+      // Push content below the translucent native header instead of under it (iOS)
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      {/* Sets the title for the popup and adds close button*/}
+      <Stack.Screen options={{
+        title: `${event.sport} Game`,
+        headerRight: () => <Pressable onPress={() => router.dismiss()} ><FontAwesomeIcon icon={faXmark} size={20} /></Pressable>,
+      }} />
 
       { /* Display the event details in a card-like format */ }
       <View style={[commonStyles.card, styles.headerCard]}>
