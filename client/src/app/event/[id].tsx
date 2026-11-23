@@ -33,7 +33,7 @@ export default function EventDetailsScreen() {
         </View>
         <Text style={styles.subtitle}>📍 {event.venue}</Text>
         <Text style={styles.subtitle}>🕒 {formatEventDateTime(event.dateTime)}</Text>
-        <Text style={[commonStyles.skillBadge, styles.skillBadge]}>{event.skillLevel}</Text>
+        {event.skillLevel && <Text style={[commonStyles.skillBadge, styles.skillBadge]}>{event.skillLevel}</Text>}
       </View>
 
       {Boolean(event.description) && (
