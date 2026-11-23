@@ -60,6 +60,8 @@ export const commonStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+
+  // Any card that is shown in the app
   card: {
     backgroundColor: colors.surface,
     padding: 16,

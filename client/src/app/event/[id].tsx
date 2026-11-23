@@ -22,10 +22,17 @@ export default function EventDetailsScreen() {
   const canJoin = !event.isJoinedByMe && !isFull && event.status !== "cancelled";
 
   return (
-    <ScrollView style={commonStyles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={commonStyles.container}
+      contentContainerStyle={styles.content}
+      
+      // Push content below the translucent native header instead of under it (iOS)
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      {/* Sets the title for the popup */}
       <Stack.Screen options={{ title: `${event.sport} Game` }} />
 
-      { /* Display the event details in a card-like format */ }
+      {/* Display the event details in a card-like format */}
       <View style={[commonStyles.card, styles.headerCard]}>
         <View style={commonStyles.gameTitleContainer}>
           <Text style={styles.title}>{event.name}</Text>
@@ -106,7 +113,7 @@ export default function EventDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 40, gap: 20 },
+  content: { paddingTop: 0, padding: 20, paddingBottom: 40, gap: 20 },
   headerCard: { padding: 20 },
   title: {
     flexShrink: 1,
