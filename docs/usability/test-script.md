@@ -8,7 +8,7 @@ Thank you for agreeing to test Usports. Usports is a mobile app for intramural s
 
 We're testing the app, not you. You can't do anything wrong here. If something is confusing, that's a problem with the app, and that's exactly what we want to find. Please be honest, and don't worry about hurting our feelings.
 
-For the test, I'll ask you to do some tasks, and I'd like you to **think out loud** while you do them. Tell me what you're looking at, what you expect to happen, what you're unsure about, and what you're tempted to tap. If you get stuck, I won't be able to help, but that's useful information too. This is a prototype, so some things may not work yet.
+For the test, I'll ask you to do some tasks, and I'd like you to **think out loud** while you do them. Tell me what you're looking at, what you expect to happen, what you're unsure about, and what you're tempted to tap. If you get stuck, I won't be able to help, but that's useful information too. I'm interested in how people do when they don’t have someone sitting next to them to help. I would like to note that this is a prototype, so some things may not work yet.
 
 I'll record the screen and your comments, but they won't be made public. Only aggregate findings will be shared. If you'd like to stop at any point, just say so.
 
