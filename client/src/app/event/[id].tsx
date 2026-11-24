@@ -1,9 +1,13 @@
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import StatusBadge from "../../components/StatusBadge";
 import { useEvents } from "../../context/EventContext";
 import { formatEventDateTime } from "../../utils/formatEventTime";
 import { colors, commonStyles } from "../../styles/common";
+
+// Imports fontawesome for using glyphs
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
