@@ -15,12 +15,16 @@ export default function GameCard({ game, onPress }: GameCardProps) {
   return (
     <Link href={`/event/${game.id}`} asChild>
       <Pressable testID={`game-card-${game.id}`} style={commonStyles.card} onPress={onPress}>
+        {/* Displays the game title, status, and skill level */}
         <View style={styles.cardHeader}>
-          <Text style={commonStyles.sportText}>{game.sport}</Text>
-          <Text style={commonStyles.skillBadge}>{game.skillLevel}</Text>
+          <View style={commonStyles.gameTitleContainer}>
+            <Text style={commonStyles.sportText}>{game.sport}</Text>
+            <StatusBadge status={game.status} />
+          </View>
+          {game.skillLevel && <Text style={commonStyles.skillBadge}>{game.skillLevel}</Text>}
         </View>
-        <StatusBadge status={game.status} />
 
+        {/* Displays the game location and time */}
         <Text style={[commonStyles.detailText, styles.detailText]}>📍 {game.venue}</Text>
         <Text style={[commonStyles.detailText, styles.detailText]}>🕒 {formatEventDateTime(game.dateTime)}</Text>
 
