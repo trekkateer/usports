@@ -1,21 +1,34 @@
 import * as database from "../../src/db";
 import {
+  addEvent,
   getAllEvents,
   getEventById,
   mapDatabaseEvent,
   addEventParticipant,
+  deleteEvent,
   removeEventParticipant,
+  updateEvent,
 } from "../../src/repositories/eventRepository";
 
 jest.mock("../../src/db", () => ({
   addParticipant: jest.fn(),
+  deleteEventRow: jest.fn(),
+  getOrCreateVenueId: jest.fn(),
   getEventRows: jest.fn(),
+  getSportId: jest.fn(),
+  insertEventRow: jest.fn(),
   removeParticipant: jest.fn(),
+  updateEventRow: jest.fn(),
   updateEventStatus: jest.fn(),
 }));
 
-const mockedGetEventRows = jest.mocked(database.getEventRows);
 const mockedAddParticipant = jest.mocked(database.addParticipant);
+const mockedDeleteEventRow = jest.mocked(database.deleteEventRow);
+const mockedGetOrCreateVenueId = jest.mocked(database.getOrCreateVenueId);
+const mockedGetEventRows = jest.mocked(database.getEventRows);
+const mockedGetSportId = jest.mocked(database.getSportId);
+const mockedInsertEventRow = jest.mocked(database.insertEventRow);
+const mockedUpdateEventRow = jest.mocked(database.updateEventRow);
 const mockedRemoveParticipant = jest.mocked(database.removeParticipant);
 const mockedUpdateEventStatus = jest.mocked(database.updateEventStatus);
 
@@ -118,6 +131,11 @@ describe("event repository reads", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedDeleteEventRow.mockResolvedValue(true);
+    mockedGetOrCreateVenueId.mockResolvedValue("venue-1");
+    mockedGetSportId.mockResolvedValue(1);
+    mockedInsertEventRow.mockResolvedValue("event-new");
+    mockedUpdateEventRow.mockResolvedValue(true);
     mockedUpdateEventStatus.mockResolvedValue();
   });
 
@@ -206,5 +224,109 @@ describe("event repository reads", () => {
 
     expect(result?.status).toBe("open");
     expect(mockedUpdateEventStatus).toHaveBeenCalledWith("event-1", "open");
+  });
+
+  it("creates an event row and adds the authenticated host as its first participant", async () => {
+    const newRow = {
+      ...row,
+      id: "event-new",
+      title: "Alex's Soccer Game",
+      host_id: "user-1",
+      sport: { name: "Soccer" },
+      participants: [
+        { status: "going" as const, user: { name: "Alex Johnson" } },
+      ],
+    };
+    mockedGetEventRows.mockResolvedValue([newRow]);
+    mockedInsertEventRow.mockResolvedValue("event-new");
+
+    const result = await addEvent({
+      id: "temporary-id",
+      name: "Alex's Soccer Game",
+      sport: "Soccer",
+      venue: "Fieldhouse",
+      dateTime: "2030-06-15T18:00:00.000Z",
+      joinedCount: 1,
+      minPlayers: 4,
+      maxPlayers: 6,
+      skillLevel: "Intermediate",
+      status: "open",
+      hostId: "user-1",
+      host: "Alex Johnson",
+      roster: ["Alex Johnson"],
+      description: "Bring a light shirt.",
+    }, "user-1");
+
+    expect(mockedGetSportId).toHaveBeenCalledWith("Soccer");
+    expect(mockedGetOrCreateVenueId).toHaveBeenCalledWith("Fieldhouse");
+    expect(mockedInsertEventRow).toHaveBeenCalledWith({
+      host_id: "user-1",
+      sport_id: 1,
+      venue_id: "venue-1",
+      title: "Alex's Soccer Game",
+      description: "Bring a light shirt.",
+      start_time: "2030-06-15T18:00:00.000Z",
+      min_players: 4,
+      max_players: 6,
+      skill_level: "intermediate",
+      status: "open",
+    });
+    expect(mockedAddParticipant).toHaveBeenCalledWith("event-new", "user-1");
+    expect(result.id).toBe("event-new");
+    expect(result.roster).toEqual(["Alex Johnson"]);
+  });
+
+  it("maps event edits to database columns", async () => {
+    const updatedRow = {
+      ...row,
+      title: "Updated game",
+      sport: { name: "Soccer" },
+      venue: { name: "New Fieldhouse" },
+      start_time: "2030-06-16T18:00:00.000Z",
+      description: "Updated details",
+      min_players: 3,
+      max_players: 5,
+      skill_level: "advanced" as const,
+      status: "cancelled" as const,
+    };
+    mockedGetEventRows
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([updatedRow]);
+    mockedGetSportId.mockResolvedValue(2);
+    mockedGetOrCreateVenueId.mockResolvedValue("venue-2");
+
+    const result = await updateEvent("event-1", {
+      name: "Updated game",
+      sport: "Soccer",
+      venue: "New Fieldhouse",
+      dateTime: "2030-06-16T18:00:00.000Z",
+      description: "Updated details",
+      minPlayers: 3,
+      maxPlayers: 5,
+      skillLevel: "Advanced",
+      status: "cancelled",
+    });
+
+    expect(mockedUpdateEventRow).toHaveBeenCalledWith("event-1", {
+      title: "Updated game",
+      sport_id: 2,
+      venue_id: "venue-2",
+      start_time: "2030-06-16T18:00:00.000Z",
+      description: "Updated details",
+      min_players: 3,
+      max_players: 5,
+      skill_level: "advanced",
+      status: "cancelled",
+    });
+    expect(result?.name).toBe("Updated game");
+    expect(result?.skillLevel).toBe("Advanced");
+  });
+
+  it("deletes an existing event row", async () => {
+    mockedGetEventRows.mockResolvedValue([row]);
+
+    await expect(deleteEvent("event-1")).resolves.toBe(true);
+
+    expect(mockedDeleteEventRow).toHaveBeenCalledWith("event-1");
   });
 });
