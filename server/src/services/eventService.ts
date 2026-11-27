@@ -2,12 +2,14 @@ import { getParticipantStatus } from "../db";
 import {
   addEventParticipant,
   addEvent,
+  deleteEvent as deleteEventRecord,
   getAllEvents,
   getEventById,
   removeEventParticipant,
+  updateEvent as updateEventRecord,
 } from "../repositories/eventRepository";
 import { CreateEventInput, Event, SkillLevel, UpdateEventInput } from "../types/event";
-import { ConflictError, NotFoundError, ValidationError } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 
 const validSkillLevels: SkillLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
@@ -100,7 +102,7 @@ export async function listEvents(filters: EventListFilters): Promise<FeedEvent[]
 }
 
 // Validates the input, then saves a new open event with the host as its first player
-export async function createEvent(input: unknown): Promise<Event> {
+export async function createEvent(input: unknown, hostId: string): Promise<Event> {
   if (!isValidCreateEventInput(input)) {
     throw new ValidationError("Invalid event data");
   }
@@ -116,7 +118,7 @@ export async function createEvent(input: unknown): Promise<Event> {
     maxPlayers: input.maxPlayers,
     skillLevel: input.skillLevel,
     status: "open",
-    hostId: input.host,
+    hostId,
     host: input.host,
     roster: [input.host],
     ...(typeof input.description === "string" && input.description.length > 0
@@ -124,7 +126,36 @@ export async function createEvent(input: unknown): Promise<Event> {
       : {}),
   };
 
-  return addEvent(newEvent);
+  return addEvent(newEvent, hostId);
+}
+
+export async function updateHostedEvent(
+  eventId: string,
+  updates: UpdateEventInput,
+  userId: string,
+): Promise<Event> {
+  const event = await findEvent(eventId);
+  if (event.hostId !== userId) {
+    throw new ForbiddenError("Only the host can update this event");
+  }
+
+  const updatedEvent = await updateEventRecord(eventId, updates);
+  if (!updatedEvent) {
+    throw new NotFoundError("Event not found");
+  }
+
+  return updatedEvent;
+}
+
+export async function deleteHostedEvent(eventId: string, userId: string): Promise<void> {
+  const event = await findEvent(eventId);
+  if (event.hostId !== userId) {
+    throw new ForbiddenError("Only the host can delete this event");
+  }
+
+  if (!(await deleteEventRecord(eventId))) {
+    throw new NotFoundError("Event not found");
+  }
 }
 
 // Adds a participant, enforcing the cancelled, double-join, and capacity rules

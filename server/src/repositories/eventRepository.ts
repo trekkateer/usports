@@ -1,9 +1,14 @@
-import { mockEvents } from "../data/events";
 import {
   addParticipant,
+  deleteEventRow,
+  EventRowUpdates,
+  getOrCreateVenueId,
+  getSportId,
   EventRowFilter,
   getEventRows,
+  insertEventRow,
   removeParticipant,
+  updateEventRow,
   updateEventStatus,
 } from "../db";
 import { Event, EventStatus, SkillLevel, UpdateEventInput } from "../types/event";
@@ -20,7 +25,7 @@ title: string;
 start_time: string;
 description: string | null;
 min_players: number;
-max_players: number;
+max_players: number | null;
 skill_level: DatabaseSkillLevel | null;
 status: EventStatus;
 host: { name: string };
@@ -44,29 +49,27 @@ function toClientSkillLevel(
 }
 
 export function mapDatabaseEvent(row: DatabaseEventRow): Event {
-const activeParticipants = row.participants.filter(
-(participant) => participant.status === "going",
-);
+  const activeParticipants = row.participants.filter(
+    (participant) => participant.status === "going",
+  );
 
   return {
-  id: row.id,
-  hostId: row.host_id,
-  name: row.title,
-  sport: row.sport.name,
-  venue: row.venue.name,
-  dateTime: row.start_time,
-  joinedCount: activeParticipants.length,
-  minPlayers: row.min_players,
-  maxPlayers: row.max_players,
-  skillLevel: toClientSkillLevel(row.skill_level),
-  status: row.status,
-  host: row.host.name,
-  roster: activeParticipants.map((participant) => participant.user.name),
-  ...(row.description === null ? {} : { description: row.description }),
+    id: row.id,
+    hostId: row.host_id,
+    name: row.title,
+    sport: row.sport.name,
+    venue: row.venue.name,
+    dateTime: row.start_time,
+    joinedCount: activeParticipants.length,
+    minPlayers: row.min_players,
+    ...(row.max_players === null ? {} : { maxPlayers: row.max_players }),
+    skillLevel: toClientSkillLevel(row.skill_level),
+    status: row.status,
+    host: row.host.name,
+    roster: activeParticipants.map((participant) => participant.user.name),
+    ...(row.description === null ? {} : { description: row.description }),
   };
 }
-
-let events: Event[] = structuredClone(mockEvents);
 
 export async function getAllEvents(filters: EventRowFilter = {}): Promise<Event[]> {
   const rows = await getEventRows(filters);
@@ -116,9 +119,30 @@ export async function removeEventParticipant(
   return updatedEvent;
 }
 
-export function addEvent(event: Event): Event {
-  events = [...events, event];
-  return event;
+export async function addEvent(event: Event, hostId: string = event.hostId): Promise<Event> {
+  const sportId = await getSportId(event.sport);
+  const venueId = await getOrCreateVenueId(event.venue);
+  const eventId = await insertEventRow({
+    host_id: hostId,
+    sport_id: sportId,
+    venue_id: venueId,
+    title: event.name,
+    description: event.description ?? null,
+    start_time: event.dateTime,
+    min_players: event.minPlayers,
+    max_players: event.maxPlayers ?? null,
+    skill_level: event.skillLevel?.toLowerCase() as DatabaseSkillLevel | null,
+    status: event.status,
+  });
+
+  await addParticipant(eventId, hostId);
+
+  const createdEvent = await getEventById(eventId);
+  if (!createdEvent) {
+    throw new Error(`addEvent error: inserted event ${eventId} could not be reloaded`);
+  }
+
+  return createdEvent;
 }
 
 export async function updateEvent(
@@ -131,13 +155,31 @@ export async function updateEvent(
     return undefined;
   }
 
-  const updatedEvent: Event = {
-    ...existingEvent,
-    ...updates,
-  };
+  const databaseUpdates: EventRowUpdates = {};
+  if (updates.name !== undefined) databaseUpdates.title = updates.name;
+  if (updates.sport !== undefined) {
+    databaseUpdates.sport_id = await getSportId(updates.sport);
+  }
+  if (updates.venue !== undefined) {
+    databaseUpdates.venue_id = await getOrCreateVenueId(updates.venue);
+  }
+  if (updates.dateTime !== undefined) databaseUpdates.start_time = updates.dateTime;
+  if (updates.description !== undefined) databaseUpdates.description = updates.description ?? null;
+  if (updates.minPlayers !== undefined) databaseUpdates.min_players = updates.minPlayers;
+  if (updates.maxPlayers !== undefined) databaseUpdates.max_players = updates.maxPlayers;
+  if (updates.skillLevel !== undefined) {
+    databaseUpdates.skill_level = updates.skillLevel?.toLowerCase() as DatabaseSkillLevel | null;
+  }
+  if (updates.status !== undefined) databaseUpdates.status = updates.status;
 
-  events = events.map((event) => (event.id === id ? updatedEvent : event));
-  return updatedEvent;
+  if (Object.keys(databaseUpdates).length === 0) {
+    return existingEvent;
+  }
+  if (!(await updateEventRow(id, databaseUpdates))) {
+    return undefined;
+  }
+
+  return getEventById(id);
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
@@ -145,10 +187,5 @@ export async function deleteEvent(id: string): Promise<boolean> {
     return false;
   }
 
-  events = events.filter((event) => event.id !== id);
-  return true;
-}
-
-export function resetEvents(): void {
-  events = structuredClone(mockEvents);
+  return deleteEventRow(id);
 }

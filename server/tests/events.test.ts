@@ -52,7 +52,7 @@ beforeEach(() => {
   jest.mocked(eventRepository.getEventById).mockImplementation(async (id) =>
     testEvents.find((event) => event.id === id),
   );
-  jest.mocked(eventRepository.addEvent).mockImplementation((event) => {
+  jest.mocked(eventRepository.addEvent).mockImplementation(async (event) => {
     testEvents = [...testEvents, event];
     return event;
   });
@@ -157,9 +157,41 @@ describe("GET /api/events/:id", () => {
 });
 
 describe("POST /api/events", () => {
+  it("requires a signed-in host to create an event", async () => {
+    const response = await request(app)
+      .post("/api/events")
+      .send(validEvent);
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("uses the signed-in host and includes the created event in the next feed request", async () => {
+    const hostId = "host-taylor";
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", signedInAs(hostId))
+      .send({ ...validEvent, host: "Untrusted display name" });
+
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.body.hostId).toBe(hostId);
+
+    const feedResponse = await request(app).get("/api/events");
+
+    expect(feedResponse.status).toBe(200);
+    expect(feedResponse.body).toContainEqual(
+      expect.objectContaining({
+        id: createResponse.body.id,
+        hostId,
+        name: "Untrusted display name's Volleyball Game",
+      }),
+    );
+  });
+
   it("creates a valid event", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({
         sport: "Volleyball",
         venue: "Fieldhouse",
@@ -178,6 +210,7 @@ describe("POST /api/events", () => {
   it("rejects invalid event data", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ sport: "", minPlayers: -1 });
 
     expect(response.status).toBe(400);
@@ -188,6 +221,7 @@ describe("POST /api/events", () => {
     const response = await request(app)
       .post("/api/events")
       .set("Content-Type", "text/plain")
+      .set("Authorization", signedInAs("host-taylor"))
       .send("not an object");
 
     expect(response.status).toBe(400);
@@ -198,6 +232,7 @@ describe("POST /api/events", () => {
   it("creates an event with a valid max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 12 });
 
     expect(response.status).toBe(201);
@@ -207,6 +242,7 @@ describe("POST /api/events", () => {
   it("allows min players to equal max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 8 });
 
     expect(response.status).toBe(201);
@@ -216,6 +252,7 @@ describe("POST /api/events", () => {
   it("rejects min players greater than max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 4 });
 
     expect(response.status).toBe(400);
@@ -225,6 +262,7 @@ describe("POST /api/events", () => {
   it("rejects a non-integer max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 10.5 });
 
     expect(response.status).toBe(400);
@@ -232,9 +270,29 @@ describe("POST /api/events", () => {
 });
 
 describe("PATCH /api/events/:id", () => {
+  it("requires a sign-in token to update an event", async () => {
+    const response = await request(app)
+      .patch("/api/events/1")
+      .send({ venue: "New Fieldhouse" });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("rejects updates from someone other than the host", async () => {
+    const response = await request(app)
+      .patch("/api/events/1")
+      .set("Authorization", signedInAs("another-user"))
+      .send({ venue: "New Fieldhouse" });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Only the host can update this event" });
+  });
+
   it("updates an existing event", async () => {
     const response = await request(app)
       .patch("/api/events/1")
+      .set("Authorization", signedInAs("host-john"))
       .send({ venue: "New Fieldhouse" });
 
     expect(response.status).toBe(200);
@@ -244,6 +302,7 @@ describe("PATCH /api/events/:id", () => {
   it("returns 404 when updating an unknown event", async () => {
     const response = await request(app)
       .patch("/api/events/unknown")
+      .set("Authorization", signedInAs("host-john"))
       .send({ venue: "New Fieldhouse" });
 
     expect(response.status).toBe(404);
@@ -263,8 +322,26 @@ describe("PATCH /api/events/:id", () => {
 });
 
 describe("DELETE /api/events/:id", () => {
+  it("requires a sign-in token to delete an event", async () => {
+    const response = await request(app).delete("/api/events/1");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("rejects deletion by someone other than the host", async () => {
+    const response = await request(app)
+      .delete("/api/events/1")
+      .set("Authorization", signedInAs("another-user"));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Only the host can delete this event" });
+  });
+
   it("deletes an existing event", async () => {
-    const deleteResponse = await request(app).delete("/api/events/1");
+    const deleteResponse = await request(app)
+      .delete("/api/events/1")
+      .set("Authorization", signedInAs("host-john"));
 
     expect(deleteResponse.status).toBe(204);
 
@@ -273,7 +350,9 @@ describe("DELETE /api/events/:id", () => {
   });
 
   it("returns 404 when deleting an unknown event", async () => {
-    const response = await request(app).delete("/api/events/unknown");
+    const response = await request(app)
+      .delete("/api/events/unknown")
+      .set("Authorization", signedInAs("host-john"));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Event not found" });
@@ -318,6 +397,7 @@ describe("POST /api/events/:id/join", () => {
   it("rejects joining an event at max capacity", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 1, maxPlayers: 1 });
 
     const response = await request(app)
@@ -330,6 +410,7 @@ describe("POST /api/events/:id/join", () => {
     it("marks an event full when the last spot is taken", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 2, maxPlayers: 2 });
 
     const response = await request(app)
@@ -341,9 +422,13 @@ describe("POST /api/events/:id/join", () => {
   });
 
   it("rejects joining a cancelled event", async () => {
-    const created = await request(app).post("/api/events").send(validEvent);
+    const created = await request(app)
+      .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
+      .send(validEvent);
     await request(app)
       .patch(`/api/events/${created.body.id}`)
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ status: "cancelled" });
 
     const response = await request(app)
@@ -357,6 +442,7 @@ describe("POST /api/events/:id/join", () => {
   it("allows joining past min players when there is no max", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 1 });
 
     const response = await request(app)
@@ -382,6 +468,7 @@ describe("DELETE /api/events/:id/join", () => {
   it("reopens a full event when someone leaves", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 2, maxPlayers: 2 });
     await request(app)
       .post(`/api/events/${created.body.id}/join`)
@@ -492,6 +579,7 @@ describe("GET /api/events with filters", () => {
   it("filters events by date", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, dateTime: "2027-10-21T18:00:00.000Z" });
 
     const response = await request(app).get("/api/events?date=2027-10-21");

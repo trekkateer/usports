@@ -122,11 +122,33 @@ describe("events API client", () => {
       `${API_BASE_URL}/api/events`,
       expect.objectContaining({
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TOKEN}`,
+        },
         body: JSON.stringify(input),
       }),
     );
     expect(result).toEqual(createdEvent);
+  });
+
+  it("forgets the sign-in when the server rejects the create token", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      json: async () => ({ error: "Please sign in" }),
+    } as Response);
+
+    await expect(createEventApi({
+      sport: "Volleyball",
+      venue: "Van Noord Arena",
+      dateTime: "2026-10-12T18:00:00.000Z",
+      minPlayers: 8,
+      skillLevel: "Beginner",
+      host: "Taylor R.",
+    })).rejects.toThrow("Please sign in");
+    expect(loadSession()).toBeNull();
   });
 
   it("joins an event via POST /api/events/:id/join", async () => {

@@ -1,8 +1,13 @@
 import {
   addParticipant,
+  deleteEventRow,
   ensureUserRow,
+  getOrCreateVenueId,
   getEventRows,
   getParticipantStatus,
+  getSportId,
+  insertEventRow,
+  updateEventRow,
   updateEventStatus,
 } from "../../src/db";
 import { supabase } from "../../src/db/client";
@@ -22,9 +27,11 @@ function createQueryBuilder(
   const query = {
     select: jest.fn(),
     insert: jest.fn(),
+    delete: jest.fn(),
     eq: jest.fn(),
     gte: jest.fn(),
     lt: jest.fn(),
+    limit: jest.fn(),
     match: jest.fn(),
     update: jest.fn(),
     maybeSingle: jest.fn(),
@@ -34,9 +41,11 @@ function createQueryBuilder(
 
   query.select.mockReturnValue(query);
   query.insert.mockReturnValue(query);
+  query.delete.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.gte.mockReturnValue(query);
   query.lt.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
   query.match.mockReturnValue(query);
   query.update.mockReturnValue(query);
   query.maybeSingle.mockReturnValue(result);
@@ -44,6 +53,123 @@ function createQueryBuilder(
 
   return query;
 }
+
+describe("event database helpers", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("finds the sport id by name", async () => {
+    const query = createQueryBuilder({ data: { id: 3 }, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(getSportId("Soccer")).resolves.toBe(3);
+    expect(mockedSupabase.from).toHaveBeenCalledWith("sports");
+    expect(query.select).toHaveBeenCalledWith("id");
+    expect(query.eq).toHaveBeenCalledWith("name", "Soccer");
+  });
+
+  it("reports when a sport is missing", async () => {
+    const query = createQueryBuilder({ data: null, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(getSportId("Curling")).rejects.toThrow(
+      "getSportId error: sport Curling was not found",
+    );
+  });
+
+  it("reuses a venue with the requested name", async () => {
+    const query = createQueryBuilder({ data: { id: "venue-1" }, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(getOrCreateVenueId("Fieldhouse")).resolves.toBe("venue-1");
+    expect(mockedSupabase.from).toHaveBeenCalledWith("venues");
+    expect(query.eq).toHaveBeenCalledWith("name", "Fieldhouse");
+    expect(query.insert).not.toHaveBeenCalled();
+  });
+
+  it("creates a venue when the name is not already stored", async () => {
+    const query = createQueryBuilder(
+      { data: null, error: null },
+      { data: { id: "venue-2" }, error: null },
+    );
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(getOrCreateVenueId("Custom Court")).resolves.toBe("venue-2");
+    expect(query.insert).toHaveBeenCalledWith({ name: "Custom Court" });
+    expect(query.select).toHaveBeenCalledWith("id");
+  });
+
+  it("inserts an event row and returns its database id", async () => {
+    const eventRow = {
+      host_id: "host-1",
+      sport_id: 3,
+      venue_id: "venue-1",
+      title: "Soccer Game",
+      description: null,
+      start_time: "2030-06-15T18:00:00.000Z",
+      min_players: 4,
+      max_players: null,
+      skill_level: "beginner" as const,
+      status: "open" as const,
+    };
+    const query = createQueryBuilder(
+      { data: null, error: null },
+      { data: { id: "event-1" }, error: null },
+    );
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(insertEventRow(eventRow)).resolves.toBe("event-1");
+    expect(mockedSupabase.from).toHaveBeenCalledWith("events");
+    expect(query.insert).toHaveBeenCalledWith(eventRow);
+  });
+
+  it("updates an event row and reports whether a row matched", async () => {
+    const query = createQueryBuilder({ data: { id: "event-1" }, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(updateEventRow("event-1", { title: "Updated title" })).resolves.toBe(true);
+    expect(query.update).toHaveBeenCalledWith({ title: "Updated title" });
+    expect(query.eq).toHaveBeenCalledWith("id", "event-1");
+  });
+
+  it("returns false when an update matches no event", async () => {
+    const query = createQueryBuilder({ data: null, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(updateEventRow("missing", { title: "Updated title" })).resolves.toBe(false);
+  });
+
+  it("deletes an event row and reports whether a row matched", async () => {
+    const query = createQueryBuilder({ data: { id: "event-1" }, error: null });
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(deleteEventRow("event-1")).resolves.toBe(true);
+    expect(query.delete).toHaveBeenCalled();
+    expect(query.eq).toHaveBeenCalledWith("id", "event-1");
+  });
+
+  it("surfaces Supabase errors when inserting an event row", async () => {
+    const query = createQueryBuilder(
+      { data: null, error: null },
+      { data: null, error: new Error("database unavailable") },
+    );
+    mockedSupabase.from.mockReturnValue(query as never);
+
+    await expect(insertEventRow({
+      host_id: "host-1",
+      sport_id: 3,
+      venue_id: "venue-1",
+      title: "Soccer Game",
+      description: null,
+      start_time: "2030-06-15T18:00:00.000Z",
+      min_players: 4,
+      max_players: null,
+      skill_level: "beginner",
+      status: "open",
+    })).rejects.toThrow("insertEventRow error: database unavailable");
+  });
+});
 
 describe("getEventRows", () => {
   beforeEach(() => {
