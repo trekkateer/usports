@@ -270,9 +270,29 @@ describe("POST /api/events", () => {
 });
 
 describe("PATCH /api/events/:id", () => {
+  it("requires a sign-in token to update an event", async () => {
+    const response = await request(app)
+      .patch("/api/events/1")
+      .send({ venue: "New Fieldhouse" });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("rejects updates from someone other than the host", async () => {
+    const response = await request(app)
+      .patch("/api/events/1")
+      .set("Authorization", signedInAs("another-user"))
+      .send({ venue: "New Fieldhouse" });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Only the host can update this event" });
+  });
+
   it("updates an existing event", async () => {
     const response = await request(app)
       .patch("/api/events/1")
+      .set("Authorization", signedInAs("host-john"))
       .send({ venue: "New Fieldhouse" });
 
     expect(response.status).toBe(200);
@@ -301,8 +321,26 @@ describe("PATCH /api/events/:id", () => {
 });
 
 describe("DELETE /api/events/:id", () => {
+  it("requires a sign-in token to delete an event", async () => {
+    const response = await request(app).delete("/api/events/1");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("rejects deletion by someone other than the host", async () => {
+    const response = await request(app)
+      .delete("/api/events/1")
+      .set("Authorization", signedInAs("another-user"));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Only the host can delete this event" });
+  });
+
   it("deletes an existing event", async () => {
-    const deleteResponse = await request(app).delete("/api/events/1");
+    const deleteResponse = await request(app)
+      .delete("/api/events/1")
+      .set("Authorization", signedInAs("host-john"));
 
     expect(deleteResponse.status).toBe(204);
 
@@ -311,7 +349,9 @@ describe("DELETE /api/events/:id", () => {
   });
 
   it("returns 404 when deleting an unknown event", async () => {
-    const response = await request(app).delete("/api/events/unknown");
+    const response = await request(app)
+      .delete("/api/events/unknown")
+      .set("Authorization", signedInAs("host-john"));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Event not found" });
