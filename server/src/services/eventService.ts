@@ -2,12 +2,14 @@ import { getParticipantStatus } from "../db";
 import {
   addEventParticipant,
   addEvent,
+  deleteEvent as deleteEventRecord,
   getAllEvents,
   getEventById,
   removeEventParticipant,
+  updateEvent as updateEventRecord,
 } from "../repositories/eventRepository";
 import { CreateEventInput, Event, SkillLevel, UpdateEventInput } from "../types/event";
-import { ConflictError, NotFoundError, ValidationError } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 
 const validSkillLevels: SkillLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
@@ -125,6 +127,35 @@ export async function createEvent(input: unknown, hostId: string): Promise<Event
   };
 
   return addEvent(newEvent, hostId);
+}
+
+export async function updateHostedEvent(
+  eventId: string,
+  updates: UpdateEventInput,
+  userId: string,
+): Promise<Event> {
+  const event = await findEvent(eventId);
+  if (event.hostId !== userId) {
+    throw new ForbiddenError("Only the host can update this event");
+  }
+
+  const updatedEvent = await updateEventRecord(eventId, updates);
+  if (!updatedEvent) {
+    throw new NotFoundError("Event not found");
+  }
+
+  return updatedEvent;
+}
+
+export async function deleteHostedEvent(eventId: string, userId: string): Promise<void> {
+  const event = await findEvent(eventId);
+  if (event.hostId !== userId) {
+    throw new ForbiddenError("Only the host can delete this event");
+  }
+
+  if (!(await deleteEventRecord(eventId))) {
+    throw new NotFoundError("Event not found");
+  }
 }
 
 // Adds a participant, enforcing the cancelled, double-join, and capacity rules

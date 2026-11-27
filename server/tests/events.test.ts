@@ -302,6 +302,7 @@ describe("PATCH /api/events/:id", () => {
   it("returns 404 when updating an unknown event", async () => {
     const response = await request(app)
       .patch("/api/events/unknown")
+      .set("Authorization", signedInAs("host-john"))
       .send({ venue: "New Fieldhouse" });
 
     expect(response.status).toBe(404);
@@ -427,6 +428,7 @@ describe("POST /api/events/:id/join", () => {
       .send(validEvent);
     await request(app)
       .patch(`/api/events/${created.body.id}`)
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ status: "cancelled" });
 
     const response = await request(app)
