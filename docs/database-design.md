@@ -196,7 +196,7 @@ CREATE TABLE venues (
 | start_time | timestamptz | NOT NULL |
 | end_time | timestamptz | NULL, must be after start_time |
 | min_players | smallint | NOT NULL, `>= 1` |
-| max_players | smallint | NOT NULL, `>= min_players` |
+| max_players | smallint | NULL means unlimited; otherwise `>= min_players` |
 | skill_level | skill_level | NULL (NULL = all levels welcome) |
 | status | event_status | NOT NULL, default `'open'` |
 | created_at | timestamptz | NOT NULL, default `now()` |
@@ -213,12 +213,12 @@ CREATE TABLE events (
   start_time  timestamptz  NOT NULL,
   end_time    timestamptz,
   min_players smallint     NOT NULL CHECK (min_players >= 1),
-  max_players smallint     NOT NULL,
+  max_players smallint,
   skill_level skill_level,
   status      event_status NOT NULL DEFAULT 'open',
   created_at  timestamptz  NOT NULL DEFAULT now(),
   updated_at  timestamptz  NOT NULL DEFAULT now(),
-  CHECK (max_players >= min_players),
+  CHECK (max_players IS NULL OR max_players >= min_players),
   CHECK (end_time IS NULL OR end_time > start_time)
 );
 CREATE INDEX idx_events_feed  ON events (status, start_time);
@@ -295,7 +295,7 @@ CREATE INDEX idx_notifications_inbox ON notifications (user_id, is_read, created
 
 **Roster and `isJoinedByMe` are not stored.** The domain model's `Event` had `roster: string[]`, `host: string`, and `isJoinedByMe`. These are replaced by `event_participants` (the roster), `host_id` (a real FK), and a per-viewer check (`EXISTS` on `event_participants`) at query time. Arrays of names would break referential integrity, and `isJoinedByMe` can't be a column because it depends on who is asking.
 
-**Participant count is derived, and `full` is enforced transactionally.** Headcount is `COUNT(*)` of `event_participants` where `status = 'going'`, so there is no counter that can drift. When someone joins, lock the event row (`SELECT … FOR UPDATE`), check the count against `max_players`, insert, and set `status = 'full'` when the count reaches max. When someone leaves, flip it back to `open`. Cancelled events are never flipped back. The host should be inserted as a participant on creation. `min_players` is advisory (used for "needs 2 more players" displays and reminders), not a hard constraint.
+**Participant count is derived, and `full` is enforced transactionally.** Headcount is `COUNT(*)` of `event_participants` where `status = 'going'`, so there is no counter that can drift. When someone joins, lock the event row (`SELECT … FOR UPDATE`), check the count against `max_players` when it is set, insert, and set `status = 'full'` when the count reaches max. A NULL `max_players` means no capacity limit. When someone leaves, flip it back to `open`. Cancelled events are never flipped back. The host should be inserted as a participant on creation. `min_players` is advisory (used for "needs 2 more players" displays and reminders), not a hard constraint.
 
 **`participant_status` keeps leave history.** Setting `status = 'cancelled'` instead of deleting the row preserves the audit trail and supports "who dropped out" notifications. If you don't need that, drop the column and delete rows instead. Rejoining is an `UPDATE`, not a second insert, thanks to the composite PK.
 
