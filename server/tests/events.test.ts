@@ -52,7 +52,7 @@ beforeEach(() => {
   jest.mocked(eventRepository.getEventById).mockImplementation(async (id) =>
     testEvents.find((event) => event.id === id),
   );
-  jest.mocked(eventRepository.addEvent).mockImplementation((event) => {
+  jest.mocked(eventRepository.addEvent).mockImplementation(async (event) => {
     testEvents = [...testEvents, event];
     return event;
   });
@@ -157,6 +157,37 @@ describe("GET /api/events/:id", () => {
 });
 
 describe("POST /api/events", () => {
+  it("requires a signed-in host to create an event", async () => {
+    const response = await request(app)
+      .post("/api/events")
+      .send(validEvent);
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: "Please sign in" });
+  });
+
+  it("uses the signed-in host and includes the created event in the next feed request", async () => {
+    const hostId = "host-taylor";
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", signedInAs(hostId))
+      .send({ ...validEvent, host: "Untrusted display name" });
+
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.body.hostId).toBe(hostId);
+
+    const feedResponse = await request(app).get("/api/events");
+
+    expect(feedResponse.status).toBe(200);
+    expect(feedResponse.body).toContainEqual(
+      expect.objectContaining({
+        id: createResponse.body.id,
+        hostId,
+        name: "Untrusted display name's Volleyball Game",
+      }),
+    );
+  });
+
   it("creates a valid event", async () => {
     const response = await request(app)
       .post("/api/events")
