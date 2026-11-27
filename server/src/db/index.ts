@@ -1,6 +1,27 @@
 import { supabase } from './client'; // or './database' if you named the client file database.ts
 import type { DatabaseEventRow } from '../repositories/eventRepository';
 
+export type NewEventRow = {
+  host_id: string;
+  sport_id: number;
+  venue_id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  min_players: number;
+  max_players: number | null;
+  skill_level: 'beginner' | 'intermediate' | 'advanced' | null;
+  status: 'open' | 'full' | 'cancelled';
+};
+
+export type EventRowUpdates = Partial<
+  Pick<
+    NewEventRow,
+    'sport_id' | 'venue_id' | 'title' | 'description' | 'start_time' |
+    'min_players' | 'max_players' | 'skill_level' | 'status'
+  >
+>;
+
 export interface EventFilter {
   sport_id?: number;
   startDate?: string;
@@ -22,6 +43,104 @@ function relationList<T>(relation: T | T[] | null | undefined): T[] {
     : Array.isArray(relation)
       ? relation
       : [relation];
+}
+
+export async function getSportId(name: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('sports')
+    .select('id')
+    .eq('name', name)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`getSportId error for ${name}: ${error.message}`);
+  }
+  if (!data || typeof data.id !== 'number') {
+    throw new Error(`getSportId error: sport ${name} was not found`);
+  }
+
+  return data.id;
+}
+
+export async function getOrCreateVenueId(name: string): Promise<string> {
+  const { data: existing, error: lookupError } = await supabase
+    .from('venues')
+    .select('id')
+    .eq('name', name)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw new Error(`getOrCreateVenueId lookup error for ${name}: ${lookupError.message}`);
+  }
+  if (existing && typeof existing.id === 'string') {
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from('venues')
+    .insert({ name })
+    .select('id')
+    .single();
+
+  if (error) {
+    throw new Error(`getOrCreateVenueId insert error for ${name}: ${error.message}`);
+  }
+  if (!data || typeof data.id !== 'string') {
+    throw new Error(`getOrCreateVenueId error: venue ${name} was not created`);
+  }
+
+  return data.id;
+}
+
+export async function insertEventRow(event: NewEventRow): Promise<string> {
+  const { data, error } = await supabase
+    .from('events')
+    .insert(event)
+    .select('id')
+    .single();
+
+  if (error) {
+    throw new Error(`insertEventRow error: ${error.message}`);
+  }
+  if (!data || typeof data.id !== 'string') {
+    throw new Error('insertEventRow error: inserted event id was not returned');
+  }
+
+  return data.id;
+}
+
+export async function updateEventRow(
+  eventId: string,
+  updates: EventRowUpdates,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('events')
+    .update(updates)
+    .eq('id', eventId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`updateEventRow error for event ${eventId}: ${error.message}`);
+  }
+
+  return data !== null;
+}
+
+export async function deleteEventRow(eventId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', eventId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`deleteEventRow error for event ${eventId}: ${error.message}`);
+  }
+
+  return data !== null;
 }
 
 export async function getEventRows(
