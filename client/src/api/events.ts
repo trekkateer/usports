@@ -98,11 +98,13 @@ export async function createEventApi(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
     body: JSON.stringify(input),
   });
 
   if (!response.ok) {
+    forgetSignInIfRejected(response);
     const errorBody = await response.json().catch(() => null);
     throw new Error(
       errorBody?.error ||
