@@ -220,7 +220,7 @@ describe("listEvents (mocked repository)", () => {
 
 describe("createEvent (mocked repository)", () => {
   it("saves a new open event with the host as its only player", async () => {
-    mockedAddEvent.mockImplementation((event) => event);
+    mockedAddEvent.mockImplementation(async (event) => event);
 
     await createEvent({
       sport: "Soccer",
@@ -229,10 +229,11 @@ describe("createEvent (mocked repository)", () => {
       minPlayers: 4,
       skillLevel: "Beginner",
       host: "Host",
-    });
+    }, "host-user");
 
     expect(mockedAddEvent).toHaveBeenCalledWith(
       expect.objectContaining({ status: "open", joinedCount: 1, roster: ["Host"] }),
+      "host-user",
     );
   });
 });

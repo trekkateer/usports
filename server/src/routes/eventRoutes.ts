@@ -24,7 +24,8 @@ router.get("/:id", async (request, response) => {
 });
 
 router.post("/", async (request, response) => {
-  response.status(201).json(await createEvent(request.body));
+  const userId = await getRequestUserId(request);
+  response.status(201).json(await createEvent(request.body, userId));
 });
 
 router.patch("/:id", async (request, response) => {

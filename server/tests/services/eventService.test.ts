@@ -62,7 +62,7 @@ beforeEach(() => {
         event.dateTime.startsWith(filters.date)),
     ),
   );
-  jest.mocked(eventRepository.addEvent).mockImplementation((event) => {
+  jest.mocked(eventRepository.addEvent).mockImplementation(async (event) => {
     testEvents = [...testEvents, event];
     return event;
   });
@@ -305,42 +305,43 @@ describe("createEvent", () => {
   };
 
   it("builds a new open event hosted by the creator", async () => {
-    const event = await createEvent(validInput);
+    const event = await createEvent(validInput, "host-uuid");
 
     expect(event.name).toBe("Taylor R.'s Volleyball Game");
     expect(event.joinedCount).toBe(1);
     expect(event.roster).toEqual(["Taylor R."]);
     expect(event.status).toBe("open");
+    expect(event.hostId).toBe("host-uuid");
   });
 
   it("saves the new event", async () => {
-    const event = await createEvent(validInput);
+    const event = await createEvent(validInput, "host-uuid");
 
-    expect(getEventById(event.id)).toBeDefined();
+    expect(await getEventById(event.id)).toBeDefined();
   });
 
   it("leaves out an empty description", async () => {
-    const event = await createEvent({ ...validInput, description: "" });
+    const event = await createEvent({ ...validInput, description: "" }, "host-uuid");
 
     expect(event).not.toHaveProperty("description");
   });
 
   it("rejects missing or blank fields", async () => {
-    const result = createEvent({ ...validInput, sport: "  " });
+    const result = createEvent({ ...validInput, sport: "  " }, "host-uuid");
 
     await expect(result).rejects.toThrow(ValidationError);
     await expect(result).rejects.toThrow("Invalid event data");
   });
 
   it("rejects min players greater than max players", async () => {
-    await expect(createEvent({ ...validInput, maxPlayers: 4 })).rejects.toThrow(ValidationError);
+    await expect(createEvent({ ...validInput, maxPlayers: 4 }, "host-uuid")).rejects.toThrow(ValidationError);
   });
 
   it("rejects an unknown skill level", async () => {
-    await expect(createEvent({ ...validInput, skillLevel: "Expert" })).rejects.toThrow(ValidationError);
+    await expect(createEvent({ ...validInput, skillLevel: "Expert" }, "host-uuid")).rejects.toThrow(ValidationError);
   });
 
   it("rejects input that is not an object", async () => {
-    await expect(createEvent("not an object")).rejects.toThrow(ValidationError);
+    await expect(createEvent("not an object", "host-uuid")).rejects.toThrow(ValidationError);
   });
 });

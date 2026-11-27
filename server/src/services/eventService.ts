@@ -100,7 +100,7 @@ export async function listEvents(filters: EventListFilters): Promise<FeedEvent[]
 }
 
 // Validates the input, then saves a new open event with the host as its first player
-export async function createEvent(input: unknown): Promise<Event> {
+export async function createEvent(input: unknown, hostId: string): Promise<Event> {
   if (!isValidCreateEventInput(input)) {
     throw new ValidationError("Invalid event data");
   }
@@ -116,7 +116,7 @@ export async function createEvent(input: unknown): Promise<Event> {
     maxPlayers: input.maxPlayers,
     skillLevel: input.skillLevel,
     status: "open",
-    hostId: input.host,
+    hostId,
     host: input.host,
     roster: [input.host],
     ...(typeof input.description === "string" && input.description.length > 0
@@ -124,7 +124,7 @@ export async function createEvent(input: unknown): Promise<Event> {
       : {}),
   };
 
-  return addEvent(newEvent);
+  return addEvent(newEvent, hostId);
 }
 
 // Adds a participant, enforcing the cancelled, double-join, and capacity rules

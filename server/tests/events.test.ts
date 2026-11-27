@@ -191,6 +191,7 @@ describe("POST /api/events", () => {
   it("creates a valid event", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({
         sport: "Volleyball",
         venue: "Fieldhouse",
@@ -209,6 +210,7 @@ describe("POST /api/events", () => {
   it("rejects invalid event data", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ sport: "", minPlayers: -1 });
 
     expect(response.status).toBe(400);
@@ -219,6 +221,7 @@ describe("POST /api/events", () => {
     const response = await request(app)
       .post("/api/events")
       .set("Content-Type", "text/plain")
+      .set("Authorization", signedInAs("host-taylor"))
       .send("not an object");
 
     expect(response.status).toBe(400);
@@ -229,6 +232,7 @@ describe("POST /api/events", () => {
   it("creates an event with a valid max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 12 });
 
     expect(response.status).toBe(201);
@@ -238,6 +242,7 @@ describe("POST /api/events", () => {
   it("allows min players to equal max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 8 });
 
     expect(response.status).toBe(201);
@@ -247,6 +252,7 @@ describe("POST /api/events", () => {
   it("rejects min players greater than max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 4 });
 
     expect(response.status).toBe(400);
@@ -256,6 +262,7 @@ describe("POST /api/events", () => {
   it("rejects a non-integer max players", async () => {
     const response = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, maxPlayers: 10.5 });
 
     expect(response.status).toBe(400);
@@ -349,6 +356,7 @@ describe("POST /api/events/:id/join", () => {
   it("rejects joining an event at max capacity", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 1, maxPlayers: 1 });
 
     const response = await request(app)
@@ -361,6 +369,7 @@ describe("POST /api/events/:id/join", () => {
     it("marks an event full when the last spot is taken", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 2, maxPlayers: 2 });
 
     const response = await request(app)
@@ -372,7 +381,10 @@ describe("POST /api/events/:id/join", () => {
   });
 
   it("rejects joining a cancelled event", async () => {
-    const created = await request(app).post("/api/events").send(validEvent);
+    const created = await request(app)
+      .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
+      .send(validEvent);
     await request(app)
       .patch(`/api/events/${created.body.id}`)
       .send({ status: "cancelled" });
@@ -388,6 +400,7 @@ describe("POST /api/events/:id/join", () => {
   it("allows joining past min players when there is no max", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 1 });
 
     const response = await request(app)
@@ -413,6 +426,7 @@ describe("DELETE /api/events/:id/join", () => {
   it("reopens a full event when someone leaves", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, minPlayers: 2, maxPlayers: 2 });
     await request(app)
       .post(`/api/events/${created.body.id}/join`)
@@ -523,6 +537,7 @@ describe("GET /api/events with filters", () => {
   it("filters events by date", async () => {
     const created = await request(app)
       .post("/api/events")
+      .set("Authorization", signedInAs("host-taylor"))
       .send({ ...validEvent, dateTime: "2027-10-21T18:00:00.000Z" });
 
     const response = await request(app).get("/api/events?date=2027-10-21");
